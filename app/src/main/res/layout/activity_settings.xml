@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="32dp" />
+
+        <!-- 题目数量设置 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/question_count"
+                android:textSize="16sp" />
+
+            <Spinner
+                android:id="@+id/spinnerQuestionCount"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <!-- 数字范围设置 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/number_range"
+                android:textSize="16sp" />
+
+            <Spinner
+                android:id="@+id/spinnerNumberRange"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <!-- 运算类型设置 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/operation_types"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <CheckBox
+            android:id="@+id/cbAddition"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/addition"
+            android:layout_marginBottom="4dp" />
+
+        <CheckBox
+            android:id="@+id/cbSubtraction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/subtraction"
+            android:layout_marginBottom="4dp" />
+
+        <CheckBox
+            android:id="@+id/cbMultiplication"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/multiplication"
+            android:layout_marginBottom="4dp" />
+
+        <CheckBox
+            android:id="@+id/cbDivision"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/division"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 自动锁定时长设置 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="32dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/auto_lock_duration"
+                android:textSize="16sp" />
+
+            <Spinner
+                android:id="@+id/spinnerAutoLockDuration"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSaveSettings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="保存设置"
+            android:backgroundTint="@color/button_primary" />
+
+    </LinearLayout>
+
+</ScrollView>

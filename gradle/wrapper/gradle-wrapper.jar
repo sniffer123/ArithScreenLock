@@ -1,0 +1,4 @@
+# This is a placeholder for the Gradle wrapper JAR file
+# In a real project, this would be the binary JAR file
+# You can download it from: https://gradle.org/releases/
+# Or run: gradle wrapper --gradle-version 8.0

@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">算术锁屏</string>
+    <string name="unlock_title">解锁屏幕</string>
+    <string name="solve_math">请解答以下数学题</string>
+    <string name="submit">提交</string>
+    <string name="correct">正确！</string>
+    <string name="incorrect">错误，请重试</string>
+    <string name="settings">设置</string>
+    <string name="parent_mode">家长模式</string>
+    <string name="enter_password">输入密码</string>
+    <string name="password_hint">密码：123456</string>
+    <string name="question_count">题目数量</string>
+    <string name="number_range">数字范围</string>
+    <string name="operation_types">运算类型</string>
+    <string name="auto_lock_duration">自动锁定时长（分钟）</string>
+    <string name="addition">加法</string>
+    <string name="subtraction">减法</string>
+    <string name="multiplication">乘法</string>
+    <string name="division">除法</string>
+    <string name="pin_code_hint">输入PIN码</string>
+    <string name="pin_code_title">PIN码验证</string>
+    <string name="hint_code">提示码：%s</string>
+    <string name="start_lock_service">启动锁屏服务</string>
+    <string name="stop_lock_service">停止锁屏服务</string>
+    <string name="service_running">锁屏服务运行中</string>
+    <string name="service_stopped">锁屏服务已停止</string>
+    <string name="permission_required">需要系统窗口权限</string>
+    <string name="go_to_settings">前往设置</string>
+</resources>
