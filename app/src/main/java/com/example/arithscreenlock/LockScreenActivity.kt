@@ -185,12 +185,10 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun unlockScreen() {
-        // 启动自动锁定定时器
-        if (!preferences.isParentMode) {
-            val intent = Intent(this, LockScreenService::class.java)
-            intent.action = LockScreenService.ACTION_START_AUTO_LOCK_TIMER
-            startService(intent)
-        }
+        // 启动自动锁定定时器（家长模式30分钟，普通模式用户设置时长）
+        val intent = Intent(this, LockScreenService::class.java)
+        intent.action = LockScreenService.ACTION_START_AUTO_LOCK_TIMER
+        startService(intent)
         
         finish()
     }

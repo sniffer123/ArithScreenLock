@@ -125,12 +125,13 @@ class LockScreenService : Service() {
         // 取消之前的定时器
         autoLockRunnable?.let { handler.removeCallbacks(it) }
         
-        // 如果是家长模式，不启动定时器
-        if (preferences.isParentMode) {
-            return
+        val delayMillis = if (preferences.isParentMode) {
+            // 家长模式：30分钟有效期
+            LockScreenPreferences.PARENT_MODE_DURATION * 60 * 1000L
+        } else {
+            // 普通模式：用户设置的自动锁定时长
+            preferences.autoLockDuration * 60 * 1000L
         }
-        
-        val delayMillis = preferences.autoLockDuration * 60 * 1000L // 转换为毫秒
         
         autoLockRunnable = Runnable {
             // 时间到后重置家长模式并显示锁屏
