@@ -1,8 +1,13 @@
 package com.example.arithscreenlock
 
 import android.app.AlertDialog
+import android.app.KeyguardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
@@ -20,18 +25,39 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var tvResult: TextView
     private val questions = mutableListOf<MathQuestion>()
     private val answerViews = mutableListOf<EditText>()
+    
+    private lateinit var keyguardManager: KeyguardManager
+    private val handler = Handler(Looper.getMainLooper())
+    private var isUnlocked = false
+    
+    // 防绕过检查任务
+    private val bypassCheckRunnable = object : Runnable {
+        override fun run() {
+            if (!isUnlocked && !isFinishing) {
+                checkAndRestoreLockScreen()
+                handler.postDelayed(this, 500) // 每500ms检查一次
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 设置为全屏并显示在锁屏上方
+        keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        
+        // 设置为全屏并显示在锁屏上方，增强防绕过
         window.addFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN or
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
             WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
+        
+        // 设置为不可取消的任务
+        setTaskDescription(android.app.ActivityManager.TaskDescription("锁屏", null, 0))
 
         setContentView(R.layout.activity_lock_screen)
 
@@ -45,6 +71,9 @@ class LockScreenActivity : AppCompatActivity() {
 
         initViews()
         generateQuestions()
+        
+        // 启动防绕过检查
+        startBypassProtection()
     }
 
     private fun initViews() {
@@ -184,7 +213,26 @@ class LockScreenActivity : AppCompatActivity() {
         return result.joinToString("")
     }
 
+    private fun startBypassProtection() {
+        handler.post(bypassCheckRunnable)
+    }
+    
+    private fun checkAndRestoreLockScreen() {
+        // 如果Activity不在前台，重新启动锁屏
+        if (!hasWindowFocus() && !isUnlocked) {
+            val intent = Intent(this, LockScreenActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                          Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                          Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                          Intent.FLAG_ACTIVITY_NO_ANIMATION
+            startActivity(intent)
+        }
+    }
+
     private fun unlockScreen() {
+        isUnlocked = true
+        handler.removeCallbacks(bypassCheckRunnable)
+        
         // 启动自动锁定定时器（家长模式30分钟，普通模式用户设置时长）
         val intent = Intent(this, LockScreenService::class.java)
         intent.action = LockScreenService.ACTION_START_AUTO_LOCK_TIMER
@@ -195,5 +243,71 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         // 禁用返回键
+    }
+    
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // 禁用所有系统键
+        return when (keyCode) {
+            KeyEvent.KEYCODE_HOME,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_MENU,
+            KeyEvent.KEYCODE_SEARCH,
+            KeyEvent.KEYCODE_APP_SWITCH -> true
+            else -> super.onKeyDown(keyCode, event)
+        }
+    }
+    
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus && !isUnlocked) {
+            // 失去焦点时，尝试重新获得焦点
+            handler.postDelayed({
+                if (!isUnlocked && !isFinishing) {
+                    val intent = Intent(this, LockScreenActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                  Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                  Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                  Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    startActivity(intent)
+                }
+            }, 100)
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        if (!isUnlocked) {
+            // 被暂停时立即重新启动
+            val intent = Intent(this, LockScreenActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                          Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                          Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                          Intent.FLAG_ACTIVITY_NO_ANIMATION
+            startActivity(intent)
+        }
+    }
+    
+    override fun onStop() {
+        super.onStop()
+        if (!isUnlocked) {
+            // 被停止时立即重新启动
+            val intent = Intent(this, LockScreenActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                          Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                          Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                          Intent.FLAG_ACTIVITY_NO_ANIMATION
+            startActivity(intent)
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(bypassCheckRunnable)
+        if (!isUnlocked) {
+            // 被销毁时立即重新启动
+            val intent = Intent(this, LockScreenService::class.java)
+            intent.action = LockScreenService.ACTION_SHOW_LOCK_SCREEN
+            startService(intent)
+        }
     }
 }

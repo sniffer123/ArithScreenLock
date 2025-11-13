@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         preferences = LockScreenPreferences(this)
+        deviceAdminManager = DeviceAdminManager(this)
         initViews()
         updateServiceStatus()
     }
@@ -30,10 +31,16 @@ class MainActivity : AppCompatActivity() {
         tvServiceStatus = findViewById(R.id.tvServiceStatus)
 
         findViewById<View>(R.id.btnStartService).setOnClickListener {
-            if (checkSystemAlertWindowPermission()) {
-                startLockScreenService()
-            } else {
-                requestSystemAlertWindowPermission()
+            when {
+                !checkSystemAlertWindowPermission() -> {
+                    requestSystemAlertWindowPermission()
+                }
+                !deviceAdminManager.isDeviceAdminActive() -> {
+                    requestDeviceAdminPermission()
+                }
+                else -> {
+                    startLockScreenService()
+                }
             }
         }
 
@@ -62,6 +69,20 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
             }
             .setNegativeButton("取消", null)
+            .show()
+    }
+    
+    private fun requestDeviceAdminPermission() {
+        AlertDialog.Builder(this)
+            .setTitle("设备管理员权限")
+            .setMessage("启用设备管理员功能可以增强锁屏安全性，防止恶意绕过。建议启用以获得更好的安全保护。")
+            .setPositiveButton("启用") { _, _ ->
+                val intent = deviceAdminManager.requestDeviceAdminPermission()
+                startActivityForResult(intent, REQUEST_CODE_DEVICE_ADMIN)
+            }
+            .setNegativeButton("跳过") { _, _ ->
+                startLockScreenService()
+            }
             .show()
     }
 
@@ -106,6 +127,21 @@ class MainActivity : AppCompatActivity() {
         // 这里可以检查服务是否正在运行
         // 为了简化，我们假设服务状态基于是否启动过
         tvServiceStatus.text = getString(R.string.service_running)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            REQUEST_CODE_DEVICE_ADMIN -> {
+                if (resultCode == RESULT_OK) {
+                    Toast.makeText(this, "设备管理员权限已启用", Toast.LENGTH_SHORT).show()
+                    startLockScreenService()
+                } else {
+                    Toast.makeText(this, "设备管理员权限被拒绝，安全性可能降低", Toast.LENGTH_LONG).show()
+                    startLockScreenService()
+                }
+            }
+        }
     }
 
     override fun onResume() {

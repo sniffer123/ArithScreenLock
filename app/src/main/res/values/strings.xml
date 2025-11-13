@@ -28,4 +28,8 @@
     <string name="go_to_settings">前往设置</string>
     <string name="parent_mode_active">家长模式已激活（30分钟有效）</string>
     <string name="parent_mode_expired">家长模式已过期，请重新验证</string>
+    <string name="device_admin_required">设备管理员权限</string>
+    <string name="device_admin_explanation">启用设备管理员功能可以增强锁屏安全性，防止恶意绕过</string>
+    <string name="security_enhanced">安全性增强</string>
+    <string name="bypass_protection_active">防绕过保护已激活</string>
 </resources>

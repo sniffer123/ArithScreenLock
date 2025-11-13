@@ -1,5 +1,6 @@
 package com.example.arithscreenlock
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -20,6 +21,16 @@ class LockScreenService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var autoLockRunnable: Runnable? = null
     private var isServiceRunning = false
+    
+    // 监控任务，定期检查锁屏状态
+    private val monitorRunnable = object : Runnable {
+        override fun run() {
+            if (isServiceRunning && !preferences.isParentMode) {
+                checkLockScreenStatus()
+            }
+            handler.postDelayed(this, 1000) // 每秒检查一次
+        }
+    }
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -45,6 +56,8 @@ class LockScreenService : Service() {
         const val ACTION_STOP_SERVICE = "STOP_SERVICE"
         const val ACTION_START_AUTO_LOCK_TIMER = "START_AUTO_LOCK_TIMER"
         const val ACTION_SHOW_LOCK_SCREEN = "SHOW_LOCK_SCREEN"
+        const val ACTION_START_MONITORING = "START_MONITORING"
+        const val ACTION_STOP_MONITORING = "STOP_MONITORING"
         
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "lock_screen_service"
@@ -62,16 +75,24 @@ class LockScreenService : Service() {
             ACTION_START_SERVICE -> {
                 startForegroundService()
                 isServiceRunning = true
+                startMonitoring()
             }
             ACTION_STOP_SERVICE -> {
                 stopForegroundService()
                 isServiceRunning = false
+                stopMonitoring()
             }
             ACTION_START_AUTO_LOCK_TIMER -> {
                 startAutoLockTimer()
             }
             ACTION_SHOW_LOCK_SCREEN -> {
                 showLockScreen()
+            }
+            ACTION_START_MONITORING -> {
+                startMonitoring()
+            }
+            ACTION_STOP_MONITORING -> {
+                stopMonitoring()
             }
         }
         return START_STICKY
@@ -142,11 +163,50 @@ class LockScreenService : Service() {
         handler.postDelayed(autoLockRunnable!!, delayMillis)
     }
 
+    private fun startMonitoring() {
+        handler.post(monitorRunnable)
+    }
+    
+    private fun stopMonitoring() {
+        handler.removeCallbacks(monitorRunnable)
+    }
+    
+    private fun checkLockScreenStatus() {
+        if (!isLockScreenActive()) {
+            // 如果锁屏不在前台，重新启动
+            showLockScreen()
+        }
+    }
+    
+    private fun isLockScreenActive(): Boolean {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val runningTasks = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // Android 5.0+ 使用不同的方法
+                val runningProcesses = activityManager.runningAppProcesses
+                runningProcesses?.any { process ->
+                    process.processName == packageName && 
+                    process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+                } ?: false
+            } else {
+                @Suppress("DEPRECATION")
+                val tasks = activityManager.getRunningTasks(1)
+                tasks.isNotEmpty() && 
+                tasks[0].topActivity?.className == LockScreenActivity::class.java.name
+            }
+        } catch (e: SecurityException) {
+            // 如果没有权限，假设锁屏不活跃
+            false
+        }
+        return runningTasks
+    }
+
     private fun showLockScreen() {
         val intent = Intent(this, LockScreenActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                    Intent.FLAG_ACTIVITY_CLEAR_TOP or 
-                   Intent.FLAG_ACTIVITY_SINGLE_TOP
+                   Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                   Intent.FLAG_ACTIVITY_NO_ANIMATION
         }
         startActivity(intent)
     }
@@ -155,6 +215,7 @@ class LockScreenService : Service() {
         super.onDestroy()
         unregisterReceiver(screenReceiver)
         autoLockRunnable?.let { handler.removeCallbacks(it) }
+        handler.removeCallbacks(monitorRunnable)
         isServiceRunning = false
     }
 
