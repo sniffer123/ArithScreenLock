@@ -15,7 +15,7 @@ class LockScreenPreferences(context: Context) {
         private const val KEY_IS_PARENT_MODE = "is_parent_mode"
         private const val KEY_PARENT_MODE_ACTIVATE_TIME = "parent_mode_activate_time"
         
-        const val DEFAULT_QUESTION_COUNT = 6
+        const val DEFAULT_QUESTION_COUNT = 4
         const val DEFAULT_MAX_NUMBER = 50
         const val DEFAULT_AUTO_LOCK_DURATION = 5 // 分钟
         const val PARENT_MODE_DURATION = 30 // 家长模式有效时长：30分钟
@@ -72,5 +72,9 @@ class LockScreenPreferences(context: Context) {
                 else -> null
             }
         }
+    }
+
+    fun getParentModeActivateTime(): Long {
+        return prefs.getLong(KEY_PARENT_MODE_ACTIVATE_TIME, 0)
     }
 }

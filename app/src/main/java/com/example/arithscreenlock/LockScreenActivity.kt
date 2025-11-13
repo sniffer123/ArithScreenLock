@@ -29,13 +29,14 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var keyguardManager: KeyguardManager
     private val handler = Handler(Looper.getMainLooper())
     private var isUnlocked = false
+    private var isDialogShowing = false
     
     // 防绕过检查任务
     private val bypassCheckRunnable = object : Runnable {
         override fun run() {
             if (!isUnlocked && !isFinishing) {
                 checkAndRestoreLockScreen()
-                handler.postDelayed(this, 500) // 每500ms检查一次
+                handler.postDelayed(this, 2000) // 每2秒检查一次，避免干扰用户交互
             }
         }
     }
@@ -157,9 +158,10 @@ class LockScreenActivity : AppCompatActivity() {
                 visibility = View.VISIBLE
             }
             
-            // 重新生成题目
+            // 错误时不重新生成题目，只是清空输入框并隐藏结果
             tvResult.postDelayed({
-                generateQuestions()
+                // 清空所有答案输入框
+                answerViews.forEach { it.text.clear() }
                 tvResult.visibility = View.GONE
             }, 2000)
         }
@@ -175,10 +177,12 @@ class LockScreenActivity : AppCompatActivity() {
         
         tvHint.text = getString(R.string.hint_code, hintCode)
         
+        isDialogShowing = true
         AlertDialog.Builder(this)
             .setTitle(R.string.pin_code_title)
             .setView(dialogView)
             .setPositiveButton("确认") { _, _ ->
+                isDialogShowing = false
                 val userPin = etPin.text.toString()
                 if (userPin == correctPin) {
                     preferences.isParentMode = true
@@ -187,7 +191,12 @@ class LockScreenActivity : AppCompatActivity() {
                     Toast.makeText(this, "PIN码错误", Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton("取消") { _, _ ->
+                isDialogShowing = false
+            }
+            .setOnDismissListener {
+                isDialogShowing = false
+            }
             .show()
     }
 
@@ -259,10 +268,10 @@ class LockScreenActivity : AppCompatActivity() {
     
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus && !isUnlocked) {
-            // 失去焦点时，尝试重新获得焦点
+        if (!hasFocus && !isUnlocked && !isDialogShowing) {
+            // 失去焦点时，延迟更长时间再检查，避免干扰用户交互
             handler.postDelayed({
-                if (!isUnlocked && !isFinishing) {
+                if (!isUnlocked && !isFinishing && !hasWindowFocus() && !isDialogShowing) {
                     val intent = Intent(this, LockScreenActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                                   Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -270,33 +279,41 @@ class LockScreenActivity : AppCompatActivity() {
                                   Intent.FLAG_ACTIVITY_NO_ANIMATION
                     startActivity(intent)
                 }
-            }, 100)
+            }, 1000) // 延长到1秒，给用户足够时间完成操作
         }
     }
     
     override fun onPause() {
         super.onPause()
-        if (!isUnlocked) {
-            // 被暂停时立即重新启动
-            val intent = Intent(this, LockScreenActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                          Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                          Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                          Intent.FLAG_ACTIVITY_NO_ANIMATION
-            startActivity(intent)
+        // 只在真正需要时重新启动，避免干扰对话框等UI交互
+        if (!isUnlocked && !isFinishing && !isDialogShowing) {
+            handler.postDelayed({
+                if (!isUnlocked && !isFinishing && !hasWindowFocus() && !isDialogShowing) {
+                    val intent = Intent(this, LockScreenActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                  Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                  Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                  Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    startActivity(intent)
+                }
+            }, 500) // 延迟500ms
         }
     }
     
     override fun onStop() {
         super.onStop()
-        if (!isUnlocked) {
-            // 被停止时立即重新启动
-            val intent = Intent(this, LockScreenActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                          Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                          Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                          Intent.FLAG_ACTIVITY_NO_ANIMATION
-            startActivity(intent)
+        // 只在Activity真正被停止且不是因为对话框引起时重新启动
+        if (!isUnlocked && !isFinishing && !isDialogShowing) {
+            handler.postDelayed({
+                if (!isUnlocked && !isFinishing && !isDialogShowing) {
+                    val intent = Intent(this, LockScreenActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                  Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                  Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                  Intent.FLAG_ACTIVITY_NO_ANIMATION
+                    startActivity(intent)
+                }
+            }, 1000) // 延迟1秒
         }
     }
     

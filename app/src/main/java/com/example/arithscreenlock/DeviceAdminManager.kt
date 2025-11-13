@@ -36,8 +36,7 @@ class DeviceAdminManager(private val context: Context) {
     }
     
     fun canLockDevice(): Boolean {
-        return isDeviceAdminActive() && 
-               devicePolicyManager.hasGrantedPolicy(adminComponent, DevicePolicyManager.USES_POLICY_FORCE_LOCK)
+        return isDeviceAdminActive()
     }
     
     fun removeAdmin() {

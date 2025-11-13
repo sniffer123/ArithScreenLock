@@ -15,7 +15,12 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
 
     private lateinit var preferences: LockScreenPreferences
+    private lateinit var deviceAdminManager: DeviceAdminManager
     private lateinit var tvServiceStatus: TextView
+    
+    companion object {
+        private const val REQUEST_CODE_DEVICE_ADMIN = 1001
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

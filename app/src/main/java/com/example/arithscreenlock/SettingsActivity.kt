@@ -1,6 +1,8 @@
 package com.example.arithscreenlock
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +17,10 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var cbSubtraction: CheckBox
     private lateinit var cbMultiplication: CheckBox
     private lateinit var cbDivision: CheckBox
+    private lateinit var switchParentMode: Switch
+    private lateinit var tvParentModeStatus: TextView
+    private val handler = Handler(Looper.getMainLooper())
+    private var updateStatusRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,11 +39,19 @@ class SettingsActivity : AppCompatActivity() {
         cbSubtraction = findViewById(R.id.cbSubtraction)
         cbMultiplication = findViewById(R.id.cbMultiplication)
         cbDivision = findViewById(R.id.cbDivision)
+        switchParentMode = findViewById(R.id.switchParentMode)
+        tvParentModeStatus = findViewById(R.id.tvParentModeStatus)
 
         setupSpinners()
 
         findViewById<View>(R.id.btnSaveSettings).setOnClickListener {
             saveSettings()
+        }
+
+        // 家长模式开关监听器
+        switchParentMode.setOnCheckedChangeListener { _, isChecked ->
+            preferences.isParentMode = isChecked
+            updateParentModeStatus()
         }
     }
 
@@ -98,6 +112,11 @@ class SettingsActivity : AppCompatActivity() {
             else -> 3 // 默认5分钟
         }
         spinnerAutoLockDuration.setSelection(durationIndex)
+
+        // 加载家长模式设置
+        switchParentMode.isChecked = preferences.isParentMode
+        updateParentModeStatus()
+        startStatusUpdateTimer()
     }
 
     private fun saveSettings() {
@@ -145,5 +164,42 @@ class SettingsActivity : AppCompatActivity() {
 
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
         finish()
+    }
+
+    private fun updateParentModeStatus() {
+        if (preferences.isParentMode) {
+            // 计算剩余时间
+            val activateTime = preferences.getParentModeActivateTime()
+            val currentTime = System.currentTimeMillis()
+            val elapsedMinutes = (currentTime - activateTime) / (1000 * 60)
+            val remainingMinutes = LockScreenPreferences.PARENT_MODE_DURATION - elapsedMinutes
+            
+            tvParentModeStatus.text = if (remainingMinutes > 0) {
+                "已启用，剩余时间：${remainingMinutes}分钟"
+            } else {
+                "已过期"
+            }
+            tvParentModeStatus.setTextColor(getColor(android.R.color.holo_green_dark))
+        } else {
+            tvParentModeStatus.text = "未启用"
+            tvParentModeStatus.setTextColor(getColor(android.R.color.darker_gray))
+        }
+    }
+
+    private fun startStatusUpdateTimer() {
+        updateStatusRunnable = object : Runnable {
+            override fun run() {
+                if (preferences.isParentMode) {
+                    updateParentModeStatus()
+                    handler.postDelayed(this, 60000) // 每分钟更新一次
+                }
+            }
+        }
+        handler.post(updateStatusRunnable!!)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        updateStatusRunnable?.let { handler.removeCallbacks(it) }
     }
 }
