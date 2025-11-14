@@ -19,6 +19,15 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var cbDivision: CheckBox
     private lateinit var switchParentMode: Switch
     private lateinit var tvParentModeStatus: TextView
+    
+    // 每个运算类型的数字限制
+    private lateinit var spinnerAdditionMax: Spinner
+    private lateinit var spinnerSubtractionMax: Spinner
+    private lateinit var spinnerMultiplicationMax: Spinner
+    private lateinit var spinnerDivisionMax: Spinner
+    
+    // 题目类型
+    private lateinit var spinnerQuestionType: Spinner
     private val handler = Handler(Looper.getMainLooper())
     private var updateStatusRunnable: Runnable? = null
 
@@ -41,6 +50,12 @@ class SettingsActivity : AppCompatActivity() {
         cbDivision = findViewById(R.id.cbDivision)
         switchParentMode = findViewById(R.id.switchParentMode)
         tvParentModeStatus = findViewById(R.id.tvParentModeStatus)
+        
+        spinnerAdditionMax = findViewById(R.id.spinnerAdditionMax)
+        spinnerSubtractionMax = findViewById(R.id.spinnerSubtractionMax)
+        spinnerMultiplicationMax = findViewById(R.id.spinnerMultiplicationMax)
+        spinnerDivisionMax = findViewById(R.id.spinnerDivisionMax)
+        spinnerQuestionType = findViewById(R.id.spinnerQuestionType)
 
         setupSpinners()
 
@@ -73,6 +88,36 @@ class SettingsActivity : AppCompatActivity() {
         val autoLockAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, autoLockOptions)
         autoLockAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerAutoLockDuration.adapter = autoLockAdapter
+
+        // 数字限制选项
+        val numberOptions = arrayOf("5", "10", "20", "50", "100", "200")
+        
+        // 加法数字限制
+        val additionAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, numberOptions)
+        additionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerAdditionMax.adapter = additionAdapter
+
+        // 减法数字限制
+        val subtractionAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, numberOptions)
+        subtractionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerSubtractionMax.adapter = subtractionAdapter
+
+        // 乘法数字限制（较小范围）
+        val multiplicationOptions = arrayOf("5", "10", "12", "15", "20", "25")
+        val multiplicationAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, multiplicationOptions)
+        multiplicationAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerMultiplicationMax.adapter = multiplicationAdapter
+
+        // 除法数字限制
+        val divisionAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, numberOptions)
+        divisionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerDivisionMax.adapter = divisionAdapter
+
+        // 题目类型选项
+        val questionTypeOptions = arrayOf("填空题", "选择题")
+        val questionTypeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, questionTypeOptions)
+        questionTypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerQuestionType.adapter = questionTypeAdapter
     }
 
     private fun loadSettings() {
@@ -112,6 +157,16 @@ class SettingsActivity : AppCompatActivity() {
             else -> 3 // 默认5分钟
         }
         spinnerAutoLockDuration.setSelection(durationIndex)
+
+        // 加载每个运算类型的数字限制设置
+        loadNumberLimitSetting(spinnerAdditionMax, preferences.maxNumberAddition, arrayOf("5", "10", "20", "50", "100", "200"))
+        loadNumberLimitSetting(spinnerSubtractionMax, preferences.maxNumberSubtraction, arrayOf("5", "10", "20", "50", "100", "200"))
+        loadNumberLimitSetting(spinnerMultiplicationMax, preferences.maxNumberMultiplication, arrayOf("5", "10", "12", "15", "20", "25"))
+        loadNumberLimitSetting(spinnerDivisionMax, preferences.maxNumberDivision, arrayOf("5", "10", "20", "50", "100", "200"))
+
+        // 加载题目类型设置
+        val questionTypeIndex = if (preferences.questionType == LockScreenPreferences.QUESTION_TYPE_MULTIPLE_CHOICE) 1 else 0
+        spinnerQuestionType.setSelection(questionTypeIndex)
 
         // 加载家长模式设置
         switchParentMode.isChecked = preferences.isParentMode
@@ -162,6 +217,19 @@ class SettingsActivity : AppCompatActivity() {
         }
         preferences.autoLockDuration = autoLockDuration
 
+        // 保存每个运算类型的数字限制
+        preferences.maxNumberAddition = getNumberFromSpinner(spinnerAdditionMax, arrayOf("5", "10", "20", "50", "100", "200"))
+        preferences.maxNumberSubtraction = getNumberFromSpinner(spinnerSubtractionMax, arrayOf("5", "10", "20", "50", "100", "200"))
+        preferences.maxNumberMultiplication = getNumberFromSpinner(spinnerMultiplicationMax, arrayOf("5", "10", "12", "15", "20", "25"))
+        preferences.maxNumberDivision = getNumberFromSpinner(spinnerDivisionMax, arrayOf("5", "10", "20", "50", "100", "200"))
+
+        // 保存题目类型
+        preferences.questionType = if (spinnerQuestionType.selectedItemPosition == 1) {
+            LockScreenPreferences.QUESTION_TYPE_MULTIPLE_CHOICE
+        } else {
+            LockScreenPreferences.QUESTION_TYPE_FILL_BLANK
+        }
+
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
         finish()
     }
@@ -196,6 +264,21 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
         handler.post(updateStatusRunnable!!)
+    }
+
+    private fun loadNumberLimitSetting(spinner: Spinner, currentValue: Int, options: Array<String>) {
+        val index = options.indexOfFirst { it.toInt() == currentValue }
+        if (index != -1) {
+            spinner.setSelection(index)
+        } else {
+            // 如果当前值不在选项中，选择最接近的
+            val closestIndex = options.map { it.toInt() }.indexOfFirst { it >= currentValue }
+            spinner.setSelection(if (closestIndex != -1) closestIndex else options.size - 1)
+        }
+    }
+
+    private fun getNumberFromSpinner(spinner: Spinner, options: Array<String>): Int {
+        return options[spinner.selectedItemPosition].toInt()
     }
 
     override fun onDestroy() {

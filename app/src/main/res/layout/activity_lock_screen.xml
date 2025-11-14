@@ -53,6 +53,35 @@
             <!-- 动态添加题目 -->
         </LinearLayout>
 
+        <!-- 按钮区域 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="24dp">
+
+            <Button
+                android:id="@+id/btnShowAnswer"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="显示答案"
+                android:textSize="16sp"
+                android:backgroundTint="@android:color/holo_orange_dark"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnNewQuestions"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_weight="1"
+                android:text="换一批"
+                android:textSize="16sp"
+                android:backgroundTint="@android:color/holo_blue_dark"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
         <Button
             android:id="@+id/btnSubmit"
             android:layout_width="match_parent"
@@ -60,7 +89,7 @@
             android:text="@string/submit"
             android:textSize="18sp"
             android:backgroundTint="@color/button_primary"
-            android:layout_marginTop="24dp" />
+            android:layout_marginTop="16dp" />
 
         <TextView
             android:id="@+id/tvResult"

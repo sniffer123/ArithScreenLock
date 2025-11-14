@@ -12,9 +12,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import kotlin.random.Random
 
@@ -23,8 +21,13 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var preferences: LockScreenPreferences
     private lateinit var layoutQuestions: LinearLayout
     private lateinit var tvResult: TextView
+    private lateinit var btnSubmit: Button
+    private lateinit var btnShowAnswer: Button
+    private lateinit var btnNewQuestions: Button
+    
     private val questions = mutableListOf<MathQuestion>()
-    private val answerViews = mutableListOf<EditText>()
+    private val answerViews = mutableListOf<View>() // 可能是EditText或RadioGroup
+    private var isAnswerShown = false
     
     private lateinit var keyguardManager: KeyguardManager
     private val handler = Handler(Looper.getMainLooper())
@@ -80,9 +83,26 @@ class LockScreenActivity : AppCompatActivity() {
     private fun initViews() {
         layoutQuestions = findViewById(R.id.layoutQuestions)
         tvResult = findViewById(R.id.tvResult)
+        btnSubmit = findViewById(R.id.btnSubmit)
+        btnShowAnswer = findViewById(R.id.btnShowAnswer)
+        btnNewQuestions = findViewById(R.id.btnNewQuestions)
         
-        findViewById<View>(R.id.btnSubmit).setOnClickListener {
-            checkAnswers()
+        btnSubmit.setOnClickListener {
+            if (isAnswerShown) {
+                // 重新开始
+                restartQuestions()
+            } else {
+                checkAnswers()
+            }
+        }
+        
+        btnShowAnswer.setOnClickListener {
+            showAnswers()
+        }
+        
+        btnNewQuestions.setOnClickListener {
+            generateQuestions()
+            tvResult.visibility = View.GONE
         }
         
         findViewById<View>(R.id.btnParentMode).setOnClickListener {
@@ -94,47 +114,85 @@ class LockScreenActivity : AppCompatActivity() {
         questions.clear()
         answerViews.clear()
         layoutQuestions.removeAllViews()
+        isAnswerShown = false
+        btnSubmit.text = getString(R.string.submit)
+        btnShowAnswer.isEnabled = true
 
         val operations = preferences.getOperationsList()
-        if (operations.isEmpty()) {
-            // 如果没有启用任何运算，默认使用加法
-            questions.addAll(
-                MathQuestionGenerator.generateQuestions(
-                    preferences.questionCount,
-                    preferences.maxNumber,
-                    listOf(MathQuestionGenerator.Operation.ADDITION)
-                )
-            )
+        val finalOperations = if (operations.isEmpty()) {
+            listOf(MathQuestionGenerator.Operation.ADDITION)
         } else {
-            questions.addAll(
-                MathQuestionGenerator.generateQuestions(
-                    preferences.questionCount,
-                    preferences.maxNumber,
-                    operations
-                )
-            )
+            operations
         }
+
+        val isMultipleChoice = preferences.questionType == LockScreenPreferences.QUESTION_TYPE_MULTIPLE_CHOICE
+
+        questions.addAll(
+            MathQuestionGenerator.generateQuestions(
+                preferences.questionCount,
+                finalOperations,
+                preferences,
+                isMultipleChoice
+            )
+        )
 
         // 为每个题目创建视图
         questions.forEach { question ->
-            val questionView = LayoutInflater.from(this)
-                .inflate(R.layout.item_math_question, layoutQuestions, false)
-            
-            val tvQuestion = questionView.findViewById<TextView>(R.id.tvQuestion)
-            val etAnswer = questionView.findViewById<EditText>(R.id.etAnswer)
-            
-            tvQuestion.text = question.getQuestionText()
-            answerViews.add(etAnswer)
-            
-            layoutQuestions.addView(questionView)
+            if (question.isMultipleChoice()) {
+                createMultipleChoiceView(question)
+            } else {
+                createFillBlankView(question)
+            }
         }
     }
 
+    private fun createFillBlankView(question: MathQuestion) {
+        val questionView = LayoutInflater.from(this)
+            .inflate(R.layout.item_math_question, layoutQuestions, false)
+        
+        val tvQuestion = questionView.findViewById<TextView>(R.id.tvQuestion)
+        val etAnswer = questionView.findViewById<EditText>(R.id.etAnswer)
+        
+        tvQuestion.text = question.getQuestionText()
+        answerViews.add(etAnswer)
+        
+        layoutQuestions.addView(questionView)
+    }
+
+    private fun createMultipleChoiceView(question: MathQuestion) {
+        val questionView = LayoutInflater.from(this)
+            .inflate(R.layout.item_math_question_choice, layoutQuestions, false)
+        
+        val tvQuestion = questionView.findViewById<TextView>(R.id.tvQuestion)
+        val rgChoices = questionView.findViewById<RadioGroup>(R.id.rgChoices)
+        
+        tvQuestion.text = question.getQuestionText()
+        
+        // 设置选项
+        val radioButtons = listOf(
+            questionView.findViewById<RadioButton>(R.id.rbChoice1),
+            questionView.findViewById<RadioButton>(R.id.rbChoice2),
+            questionView.findViewById<RadioButton>(R.id.rbChoice3),
+            questionView.findViewById<RadioButton>(R.id.rbChoice4)
+        )
+        
+        question.choices.forEachIndexed { index, choice ->
+            if (index < radioButtons.size) {
+                radioButtons[index].text = choice.toString()
+            }
+        }
+        
+        answerViews.add(rgChoices)
+        layoutQuestions.addView(questionView)
+    }
+
     private fun checkAnswers() {
+        if (isAnswerShown) return
+        
         var correctCount = 0
         
         for (i in questions.indices) {
-            val userAnswer = answerViews[i].text.toString().toIntOrNull()
+            val userAnswer = getUserAnswer(i)
             if (userAnswer == questions[i].answer) {
                 correctCount++
             }
@@ -153,17 +211,42 @@ class LockScreenActivity : AppCompatActivity() {
             }, 1000)
         } else {
             tvResult.apply {
-                text = getString(R.string.incorrect)
+                text = "答对 $correctCount/${questions.size} 题，请重试"
                 setTextColor(getColor(android.R.color.holo_red_light))
                 visibility = View.VISIBLE
             }
             
-            // 错误时不重新生成题目，只是清空输入框并隐藏结果
+            // 错误时不重新生成题目，只是清空答案并隐藏结果
             tvResult.postDelayed({
-                // 清空所有答案输入框
-                answerViews.forEach { it.text.clear() }
+                clearAnswers()
                 tvResult.visibility = View.GONE
             }, 2000)
+        }
+    }
+
+    private fun getUserAnswer(index: Int): Int? {
+        val answerView = answerViews[index]
+        return when (answerView) {
+            is EditText -> answerView.text.toString().toIntOrNull()
+            is RadioGroup -> {
+                val selectedId = answerView.checkedRadioButtonId
+                if (selectedId != -1) {
+                    val selectedRadioButton = answerView.findViewById<RadioButton>(selectedId)
+                    selectedRadioButton?.text?.toString()?.toIntOrNull()
+                } else {
+                    null
+                }
+            }
+            else -> null
+        }
+    }
+
+    private fun clearAnswers() {
+        answerViews.forEach { answerView ->
+            when (answerView) {
+                is EditText -> answerView.text.clear()
+                is RadioGroup -> answerView.clearCheck()
+            }
         }
     }
 
@@ -220,6 +303,65 @@ class LockScreenActivity : AppCompatActivity() {
         }
         
         return result.joinToString("")
+    }
+
+    private fun showAnswers() {
+        if (isAnswerShown) return
+        
+        isAnswerShown = true
+        btnSubmit.text = "重新开始"
+        btnShowAnswer.isEnabled = false
+        
+        // 显示所有答案
+        for (i in questions.indices) {
+            val questionView = layoutQuestions.getChildAt(i)
+            val tvAnswer = questionView.findViewById<TextView>(R.id.tvAnswer)
+            tvAnswer?.apply {
+                text = "答案：${questions[i].answer}"
+                visibility = View.VISIBLE
+            }
+        }
+        
+        // 禁用所有输入
+        disableAllInputs()
+        
+        tvResult.apply {
+            text = "答案已显示，点击重新开始继续答题"
+            setTextColor(getColor(android.R.color.holo_blue_light))
+            visibility = View.VISIBLE
+        }
+    }
+
+    private fun disableAllInputs() {
+        answerViews.forEach { answerView ->
+            when (answerView) {
+                is EditText -> answerView.isEnabled = false
+                is RadioGroup -> {
+                    for (i in 0 until answerView.childCount) {
+                        answerView.getChildAt(i).isEnabled = false
+                    }
+                }
+            }
+        }
+    }
+
+    private fun enableAllInputs() {
+        answerViews.forEach { answerView ->
+            when (answerView) {
+                is EditText -> answerView.isEnabled = true
+                is RadioGroup -> {
+                    for (i in 0 until answerView.childCount) {
+                        answerView.getChildAt(i).isEnabled = true
+                    }
+                }
+            }
+        }
+    }
+
+    private fun restartQuestions() {
+        generateQuestions()
+        enableAllInputs()
+        tvResult.visibility = View.GONE
     }
 
     private fun startBypassProtection() {

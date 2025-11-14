@@ -15,10 +15,22 @@ class LockScreenPreferences(context: Context) {
         private const val KEY_IS_PARENT_MODE = "is_parent_mode"
         private const val KEY_PARENT_MODE_ACTIVATE_TIME = "parent_mode_activate_time"
         
+        // 每个运算类型的数字限制
+        private const val KEY_MAX_NUMBER_ADDITION = "max_number_addition"
+        private const val KEY_MAX_NUMBER_SUBTRACTION = "max_number_subtraction"
+        private const val KEY_MAX_NUMBER_MULTIPLICATION = "max_number_multiplication"
+        private const val KEY_MAX_NUMBER_DIVISION = "max_number_division"
+        
+        // 题目类型设置
+        private const val KEY_QUESTION_TYPE = "question_type" // "fill_blank" 或 "multiple_choice"
+        
         const val DEFAULT_QUESTION_COUNT = 4
         const val DEFAULT_MAX_NUMBER = 50
         const val DEFAULT_AUTO_LOCK_DURATION = 5 // 分钟
         const val PARENT_MODE_DURATION = 30 // 家长模式有效时长：30分钟
+        
+        const val QUESTION_TYPE_FILL_BLANK = "fill_blank"
+        const val QUESTION_TYPE_MULTIPLE_CHOICE = "multiple_choice"
     }
 
     var questionCount: Int
@@ -76,5 +88,36 @@ class LockScreenPreferences(context: Context) {
 
     fun getParentModeActivateTime(): Long {
         return prefs.getLong(KEY_PARENT_MODE_ACTIVATE_TIME, 0)
+    }
+
+    // 每个运算类型的数字限制
+    var maxNumberAddition: Int
+        get() = prefs.getInt(KEY_MAX_NUMBER_ADDITION, DEFAULT_MAX_NUMBER)
+        set(value) = prefs.edit().putInt(KEY_MAX_NUMBER_ADDITION, value).apply()
+
+    var maxNumberSubtraction: Int
+        get() = prefs.getInt(KEY_MAX_NUMBER_SUBTRACTION, DEFAULT_MAX_NUMBER)
+        set(value) = prefs.edit().putInt(KEY_MAX_NUMBER_SUBTRACTION, value).apply()
+
+    var maxNumberMultiplication: Int
+        get() = prefs.getInt(KEY_MAX_NUMBER_MULTIPLICATION, 10) // 乘法默认较小
+        set(value) = prefs.edit().putInt(KEY_MAX_NUMBER_MULTIPLICATION, value).apply()
+
+    var maxNumberDivision: Int
+        get() = prefs.getInt(KEY_MAX_NUMBER_DIVISION, 100) // 除法默认较大
+        set(value) = prefs.edit().putInt(KEY_MAX_NUMBER_DIVISION, value).apply()
+
+    // 题目类型设置
+    var questionType: String
+        get() = prefs.getString(KEY_QUESTION_TYPE, QUESTION_TYPE_FILL_BLANK) ?: QUESTION_TYPE_FILL_BLANK
+        set(value) = prefs.edit().putString(KEY_QUESTION_TYPE, value).apply()
+
+    fun getMaxNumberForOperation(operation: MathQuestionGenerator.Operation): Int {
+        return when (operation) {
+            MathQuestionGenerator.Operation.ADDITION -> maxNumberAddition
+            MathQuestionGenerator.Operation.SUBTRACTION -> maxNumberSubtraction
+            MathQuestionGenerator.Operation.MULTIPLICATION -> maxNumberMultiplication
+            MathQuestionGenerator.Operation.DIVISION -> maxNumberDivision
+        }
     }
 }

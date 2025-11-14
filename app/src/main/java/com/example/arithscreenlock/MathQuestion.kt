@@ -4,10 +4,15 @@ data class MathQuestion(
     val operand1: Int,
     val operand2: Int,
     val operator: String,
-    val answer: Int
+    val answer: Int,
+    val choices: List<Int> = emptyList() // 选择题选项
 ) {
     fun getQuestionText(): String {
         return "$operand1 $operator $operand2 ="
+    }
+    
+    fun isMultipleChoice(): Boolean {
+        return choices.isNotEmpty()
     }
 }
 
@@ -21,23 +26,63 @@ object MathQuestionGenerator {
 
     fun generateQuestions(
         count: Int,
-        maxNumber: Int,
-        operations: List<Operation>
+        operations: List<Operation>,
+        preferences: LockScreenPreferences,
+        isMultipleChoice: Boolean = false
     ): List<MathQuestion> {
         val questions = mutableListOf<MathQuestion>()
         
         repeat(count) {
             val operation = operations.random()
+            val maxNumber = preferences.getMaxNumberForOperation(operation)
             val question = when (operation) {
                 Operation.ADDITION -> generateAddition(maxNumber)
                 Operation.SUBTRACTION -> generateSubtraction(maxNumber)
                 Operation.MULTIPLICATION -> generateMultiplication(maxNumber)
                 Operation.DIVISION -> generateDivision(maxNumber)
             }
-            questions.add(question)
+            
+            val finalQuestion = if (isMultipleChoice) {
+                question.copy(choices = generateChoices(question.answer))
+            } else {
+                question
+            }
+            
+            questions.add(finalQuestion)
         }
         
         return questions
+    }
+
+    private fun generateChoices(correctAnswer: Int): List<Int> {
+        val choices = mutableSetOf<Int>()
+        choices.add(correctAnswer)
+        
+        // 生成3个错误选项
+        while (choices.size < 4) {
+            val wrongAnswer = when {
+                correctAnswer <= 10 -> {
+                    // 小数字：生成相近的错误答案
+                    val offset = (-3..3).random()
+                    (correctAnswer + offset).coerceAtLeast(0)
+                }
+                correctAnswer <= 100 -> {
+                    // 中等数字：生成相对较近的错误答案
+                    val offset = (-10..10).random()
+                    (correctAnswer + offset).coerceAtLeast(0)
+                }
+                else -> {
+                    // 大数字：生成更大范围的错误答案
+                    val offset = (-correctAnswer / 4..correctAnswer / 4).random()
+                    (correctAnswer + offset).coerceAtLeast(0)
+                }
+            }
+            if (wrongAnswer != correctAnswer) {
+                choices.add(wrongAnswer)
+            }
+        }
+        
+        return choices.toList().shuffled()
     }
 
     private fun generateAddition(maxNumber: Int): MathQuestion {

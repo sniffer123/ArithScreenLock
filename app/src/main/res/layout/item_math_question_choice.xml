@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/tvQuestion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2 + 3 ="
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <RadioGroup
+        android:id="@+id/rgChoices"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginHorizontal="8dp">
+
+        <RadioButton
+            android:id="@+id/rbChoice1"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="选项1"
+            android:textColor="@color/radio_button_text_selector"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:button="@null"
+            android:background="@drawable/radio_button_selector"
+            android:layout_marginEnd="6dp"
+            android:minWidth="60dp" />
+
+        <RadioButton
+            android:id="@+id/rbChoice2"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="选项2"
+            android:textColor="@color/radio_button_text_selector"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:button="@null"
+            android:background="@drawable/radio_button_selector"
+            android:layout_marginEnd="6dp"
+            android:minWidth="60dp" />
+
+        <RadioButton
+            android:id="@+id/rbChoice3"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="选项3"
+            android:textColor="@color/radio_button_text_selector"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:button="@null"
+            android:background="@drawable/radio_button_selector"
+            android:layout_marginEnd="6dp"
+            android:minWidth="60dp" />
+
+        <RadioButton
+            android:id="@+id/rbChoice4"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="选项4"
+            android:textColor="@color/radio_button_text_selector"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:button="@null"
+            android:background="@drawable/radio_button_selector"
+            android:minWidth="60dp" />
+
+    </RadioGroup>
+
+    <!-- 答案显示区域（默认隐藏） -->
+    <TextView
+        android:id="@+id/tvAnswer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="答案：5"
+        android:textColor="@android:color/holo_green_dark"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+</LinearLayout>
