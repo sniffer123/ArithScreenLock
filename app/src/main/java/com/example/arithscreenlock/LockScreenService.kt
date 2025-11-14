@@ -21,11 +21,12 @@ class LockScreenService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var autoLockRunnable: Runnable? = null
     private var isServiceRunning = false
+    private var isUnlockPeriod = false // 标记是否在解锁期间
     
     // 监控任务，定期检查锁屏状态
     private val monitorRunnable = object : Runnable {
         override fun run() {
-            if (isServiceRunning && !preferences.isParentMode) {
+            if (isServiceRunning && !preferences.isParentMode && !isUnlockPeriod) {
                 checkLockScreenStatus()
             }
             handler.postDelayed(this, 1000) // 每秒检查一次
@@ -36,14 +37,14 @@ class LockScreenService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 Intent.ACTION_SCREEN_OFF -> {
-                    // 屏幕关闭时显示锁屏
-                    if (isServiceRunning && !preferences.isParentMode) {
+                    // 屏幕关闭时显示锁屏（除非在解锁期间）
+                    if (isServiceRunning && !preferences.isParentMode && !isUnlockPeriod) {
                         showLockScreen()
                     }
                 }
                 Intent.ACTION_SCREEN_ON -> {
-                    // 屏幕开启时也显示锁屏
-                    if (isServiceRunning && !preferences.isParentMode) {
+                    // 屏幕开启时也显示锁屏（除非在解锁期间）
+                    if (isServiceRunning && !preferences.isParentMode && !isUnlockPeriod) {
                         showLockScreen()
                     }
                 }
@@ -147,17 +148,26 @@ class LockScreenService : Service() {
         autoLockRunnable?.let { handler.removeCallbacks(it) }
         
         val delayMillis = if (preferences.isParentMode) {
-            // 家长模式：30分钟有效期
+            // 家长模式：30分钟有效期，到期后恢复正常锁屏
             LockScreenPreferences.PARENT_MODE_DURATION * 60 * 1000L
         } else {
-            // 普通模式：用户设置的自动锁定时长
+            // 普通模式：用户设置的解锁持续时长，到期后恢复锁屏监控
             preferences.autoLockDuration * 60 * 1000L
         }
         
+        // 设置解锁期间标志，暂停锁屏监控
+        isUnlockPeriod = true
+        
         autoLockRunnable = Runnable {
-            // 时间到后重置家长模式并显示锁屏
-            preferences.isParentMode = false
-            showLockScreen()
+            // 解锁期间结束
+            isUnlockPeriod = false
+            
+            if (preferences.isParentMode) {
+                // 家长模式到期，关闭家长模式
+                preferences.isParentMode = false
+            }
+            
+            // 解锁期间结束后，不立即显示锁屏，等待下次触发条件（如息屏、亮屏等）
         }
         
         handler.postDelayed(autoLockRunnable!!, delayMillis)
